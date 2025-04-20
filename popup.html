@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Distillo Anki Converter</title>
+  <!-- Pico.css -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"/>
+  <style>
+    :root {
+      /* Simplified variables */
+      --top-bar-border-light: var(--pico-card-border-color);
+      --top-bar-border-dark: var(--pico-card-border-color);
+      --icon-color-light: var(--pico-secondary);
+      --icon-color-dark: var(--pico-secondary);
+      --icon-hover-bg-light: var(--pico-secondary-hover-background);
+      --icon-hover-bg-dark: var(--pico-secondary-hover-background);
+      --preview-bg-light: rgba(128, 128, 128, 0.08);
+      --preview-bg-dark: rgba(128, 128, 128, 0.15);
+      --spinner-size: 24px;
+      --spinner-border-size: 3px;
+      --spinner-color: var(--pico-secondary);
+    }
+
+    /* Revert body styles - Removed comment */
+    body {
+      width: 270px; /* Set width */
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      /* Let content determine height */
+      background-color: var(--pico-background-color);
+    }
+
+    /* Remove wrapper styles - Removed comment */
+
+    #top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.6rem 0.8rem;
+        border-bottom: 1px solid var(--top-bar-border-light);
+        flex-shrink: 0;
+        background-color: var(--pico-card-background-color);
+    }
+    [data-theme="dark"] #top-bar {
+        border-bottom-color: var(--top-bar-border-dark);
+        background-color: var(--pico-card-background-color);
+    }
+
+    /* Styles for logo, tool name, action icons */
+    #logo-area {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    #logo-area img {
+        width: 20px;
+        height: 20px;
+        display: block;
+    }
+    #tool-name {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: var(--pico-contrast);
+    }
+    #action-icons {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    .action-button {
+        background: none;
+        border: none;
+        padding: 0.3rem;
+        margin: 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--pico-border-radius);
+        color: var(--icon-color-light);
+        transition: background-color 0.15s ease;
+    }
+    [data-theme="dark"] .action-button {
+        color: var(--icon-color-dark);
+    }
+    .action-button:hover {
+        background-color: var(--icon-hover-bg-light);
+    }
+    [data-theme="dark"] .action-button:hover {
+        background-color: var(--icon-hover-bg-dark);
+    }
+    .action-button svg {
+        width: 16px;
+        height: 16px;
+        fill: currentColor;
+    }
+
+    main.container {
+        padding: 1rem 1.2rem 1.5rem 1.2rem;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #video-preview {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 0.8rem;
+        border-radius: var(--pico-border-radius);
+        background-color: var(--preview-bg-light);
+        margin-bottom: 1.5rem;
+        text-align: left;
+        display: none; /* Hidden initially */
+        min-height: 61px;
+        position: relative;
+    }
+    [data-theme="dark"] #video-preview {
+        background-color: var(--preview-bg-dark);
+    }
+    #video-preview.loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+    #video-preview.loading #thumbnail-container,
+    #video-preview.loading #video-info {
+        display: none;
+    }
+    #video-preview.error-loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center; 
+    }
+     #video-preview.error-loading #thumbnail-container,
+     #video-preview.error-loading #video-info {
+        display: none;
+    }
+     #video-preview.error-loading::before {
+        content: var(--error-message, "Error loading video info.");
+        color: var(--pico-color-red-500);
+        display: block;
+        max-width: 90%;
+    }
+     #video-preview.loaded {
+        display: flex;
+     }
+     #video-preview.loaded #thumbnail-container,
+     #video-preview.loaded #video-info {
+        display: flex;
+    }
+     #video-preview.loaded .spinner {
+        display: none;
+     }
+
+    #thumbnail-container {
+        flex-shrink: 0;
+    }
+    #video-thumbnail {
+        width: 80px;
+        height: 45px;
+        border-radius: calc(var(--pico-border-radius) / 2);
+        object-fit: cover;
+        display: block;
+        background-color: var(--pico-secondary-background);
+    }
+    #video-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        overflow: hidden;
+    }
+    #video-title {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--pico-contrast);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    #channel-name {
+        font-size: 0.8rem;
+        color: var(--pico-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    button#convertButton {
+       visibility: hidden;
+       margin-top: auto;
+       border-radius: 8px;
+       padding: 12px 20px;
+       font-weight: 500;
+       transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+       box-shadow: var(--pico-box-shadow);
+    }
+     #video-preview.loaded + button#convertButton {
+        visibility: visible;
+    }
+    [data-theme="dark"] button#convertButton {
+         box-shadow: var(--pico-box-shadow);
+    }
+    button#convertButton:hover:not(:disabled) {
+        transform: translateY(-1px);
+    }
+
+    #status {
+      margin-top: 1.2rem;
+      min-height: 2em;
+      font-size: var(--pico-font-size);
+      color: var(--pico-secondary);
+    }
+    #status.success {
+        color: var(--pico-color-green-500);
+    }
+    #status.error {
+        color: var(--pico-color-red-500);
+    }
+
+    .spinner {
+      width: var(--spinner-size);
+      height: var(--spinner-size);
+      border: var(--spinner-border-size) solid var(--pico-secondary-background);
+      border-top: var(--spinner-border-size) solid var(--spinner-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Removed popup-content-wrapper - Removed Comment -->
+  <header id="top-bar">
+    <div id="logo-area">
+        <img 
+            src="icons/icon48.png" 
+            srcset="icons/icon48.png 1x, icons/icon128.png 2x" 
+            alt="Distillo Logo"
+            width="20" height="20"
+        >
+        <span id="tool-name">Distillo</span>
+    </div>
+    <div id="action-icons">
+        <button class="action-button" id="flag-button" title="Report Issue">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
+        </button>
+        <button class="action-button" id="settings-button" title="Settings">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.08-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19-.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
+        </button>
+        <button class="action-button" id="close-button" title="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+    </div>
+  </header>
+
+  <main class="container">
+      <div id="video-preview">
+          <div class="spinner"></div> 
+          <div id="thumbnail-container">
+              <img id="video-thumbnail" src="" alt="Video Thumbnail">
+          </div>
+          <div id="video-info">
+              <span id="video-title"></span>
+              <span id="channel-name"></span>
+          </div>
+      </div>
+
+      <button id="convertButton">Convert to Anki Deck</button>
+      <div id="status" aria-live="polite"></div>
+  </main>
+  <!-- Removed popup-content-wrapper - Removed Comment -->
+
+  <script src="popup.js"></script>
+</body>
+</html> 
